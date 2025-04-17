@@ -2,7 +2,7 @@ class Pvm < Formula
     desc "PHP-based CLI version manager"
     homepage "https://github.com/shuvo7670/homebrew-pvm"
     url "https://github.com/shuvo7670/homebrew-pvm/releases/download/1.0.0/pvm"
-    sha256 "5d4d3f8d6c0a8b1e736041c6599b4e08d392fc07b7feabbb9246592c917ccadf"
+    sha256 "cc3768b86344f9e11352c5db8349cd153d1f75074a804b0d62e1ca6280723a60"
     license "MIT"
     depends_on "php"
   
