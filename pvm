@@ -1,0 +1,158 @@
+#!/usr/bin/env php
+
+# pvm - PHP Version Manager using shivammathur/php
+
+TAP="shivammathur/php"
+
+function ensure_tap() {
+  if ! brew tap | grep -q "$TAP"; then
+    echo "Tapping $TAP..."
+    brew tap $TAP
+  fi
+}
+
+function install_php() {
+  version=$1
+  ensure_tap
+  echo "Installing PHP $version..."
+  brew install $TAP/php@$version
+}
+
+function use_php() {
+  version=$1
+
+  echo "Switching to PHP $version..."
+
+  # Unlink all installed php@* versions
+  for formula in $(brew list --formula | grep '^php@'); do
+    brew unlink "$formula" >/dev/null 2>&1
+  done
+
+  # Link the selected version
+  brew link --overwrite --force php@$version
+}
+
+function xdebug_control() {
+  action=$1
+  php_bin=$(which php)
+  php_version=$($php_bin -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;')
+  ini_file=$($php_bin --ini | grep "Loaded Configuration File" | awk '{print $NF}')
+
+  if [ ! -f "$ini_file" ]; then
+    echo "❌ Could not find php.ini"
+    return 1
+  fi
+
+  # Where Xdebug should be installed (varies by PHP version)
+  ext_dir=$(pecl config-get ext_dir 2>/dev/null)
+  xdebug_so="$ext_dir/xdebug.so"
+
+  case "$action" in
+    enable)
+      if php -m | grep -q xdebug; then
+        echo "✅ Xdebug is already enabled for PHP $php_version"
+        return
+      fi
+
+      if [ ! -f "$xdebug_so" ]; then
+        echo "📦 Installing Xdebug via pecl for PHP $php_version..."
+        yes '' | pecl install xdebug || {
+          echo "❌ Failed to install Xdebug via pecl"
+          return 1
+        }
+      fi
+
+      # Clean up old lines and append correct path for zend_extension
+      sed -i '' '/xdebug.so/d' "$ini_file"
+      sed -i '' '/\[xdebug\]/,/^$/d' "$ini_file"  # Remove any previous Xdebug configurations
+      echo "zend_extension=\"$xdebug_so\"" >> "$ini_file"
+
+      # Add Xdebug configuration settings
+      {
+        echo "[xdebug]"
+        echo "xdebug.mode=debug"
+        echo "xdebug.start_with_request=yes"
+        echo "xdebug.client_host=127.0.0.1"
+        echo "xdebug.client_port=9003"
+        echo "xdebug.log=/tmp/xdebug.log"
+      } >> "$ini_file"
+
+      echo "✅ Xdebug enabled and configured for PHP $php_version"
+      echo "ℹ️  Restart your terminal or run: exec \$SHELL"
+      ;;
+
+    disable)
+      echo "🔧 Disabling Xdebug..."
+      sed -i '' '/xdebug.so/d' "$ini_file"
+      sed -i '' '/\[xdebug\]/,/^$/d' "$ini_file"  # Remove all xdebug-related settings
+      echo "❌ Xdebug disabled for PHP $php_version"
+      ;;
+
+    status)
+      if php -m | grep -q xdebug; then
+        echo "✅ Xdebug is ENABLED for PHP $php_version"
+      else
+        echo "❌ Xdebug is DISABLED for PHP $php_version"
+      fi
+      ;;
+
+    *)
+      echo "Usage: pvm xdebug [enable|disable|status]"
+      ;;
+  esac
+}
+
+
+function uninstall_php() {
+  version=$1
+  echo "Uninstalling PHP $version..."
+  brew uninstall $TAP/php@$version
+}
+
+function list_php() {
+  echo "Available PHP versions:"
+  brew search php@ | grep "$TAP"
+}
+
+function current_php() {
+  echo "Current PHP version:"
+  php -v | head -n 1
+}
+
+function help_menu() {
+  echo "pvm - PHP Version Manager"
+  echo ""
+  echo "Usage: pvm [command] [version]"
+  echo ""
+  echo "Commands:"
+  echo "  install [version]   Install PHP version (e.g., 8.3)"
+  echo "  use [version]       Switch to PHP version (e.g., 8.2)"
+  echo "  uninstall [version] Uninstall PHP version"
+  echo "  list                List available PHP versions"
+  echo "  current             Show current PHP version"
+  echo "  help                Show this help message"
+}
+
+case "$1" in
+  install)
+    install_php "$2"
+    ;;
+  xdebug)
+  xdebug_control "$2"
+  ;;
+  use)
+    use_php "$2"
+    ;;
+  uninstall)
+    uninstall_php "$2"
+    ;;
+  list)
+    list_php
+    ;;
+  current)
+    current_php
+    ;;
+  help|*)
+    help_menu
+    ;;
+esac
