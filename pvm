@@ -3,6 +3,7 @@
 # pvm - PHP Version Manager using shivammathur/php
 
 TAP="shivammathur/php"
+PVM_VERSION="1.0.0"  # Define the version of pvm
 
 function ensure_tap() {
   if ! brew tap | grep -q "$TAP"; then
@@ -119,6 +120,10 @@ function current_php() {
   php -v | head -n 1
 }
 
+function version() {
+  echo "pvm version $PVM_VERSION"
+}
+
 function help_menu() {
   echo "pvm - PHP Version Manager"
   echo ""
@@ -130,6 +135,7 @@ function help_menu() {
   echo "  uninstall [version] Uninstall PHP version"
   echo "  list                List available PHP versions"
   echo "  current             Show current PHP version"
+  echo "  version             Show pvm version"
   echo "  help                Show this help message"
 }
 
@@ -138,8 +144,8 @@ case "$1" in
     install_php "$2"
     ;;
   xdebug)
-  xdebug_control "$2"
-  ;;
+    xdebug_control "$2"
+    ;;
   use)
     use_php "$2"
     ;;
@@ -151,6 +157,9 @@ case "$1" in
     ;;
   current)
     current_php
+    ;;
+  version|-v|--version)
+    version
     ;;
   help|*)
     help_menu
