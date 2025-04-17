@@ -1,4 +1,4 @@
-#!/usr/bin/env php
+#!/usr/bin/env bash
 
 # pvm - PHP Version Manager using shivammathur/php
 
